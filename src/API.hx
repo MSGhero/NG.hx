@@ -19,7 +19,9 @@ class API {
 	var userId:UInt;
 	var sessionId:String;
 	
-	var radix79:String = "/g8236klvBQ#&|;Zb*7CEA59%s`Oue1wziFp$rDVY@TKxUPWytSaGHJ>dmoMR^<0~4qNLhc(I+fjn)X";
+	var medals:Array<Medal>;
+	
+	inline static var radix79:String = "/g8236klvBQ#&|;Zb*7CEA59%s`Oue1wziFp$rDVY@TKxUPWytSaGHJ>dmoMR^<0~4qNLhc(I+fjn)X";
 	
 	public function new() {
 		
@@ -63,14 +65,14 @@ class API {
 		
 		log('----- ${o.movie_name} -----');
 		
-		var medals = (o.medals:Array<Dynamic>);
-		for (medal in medals) {
-			// medals: "Medal: 01. Name (locked, 5pts, Easy)" Easy, Moderate, Challenging, Difficult, Brutal correspond to medal difficulties 1,2,3,4,5
-			log('Medal: ${medal.medal_value}. ${medal.medal_name}    (${medal.unlocked ? "unlocked" : "locked"})');
-			// store medal objects
+		medals = [];
+		var medalData = (o.medals:Array<Dynamic>);
+		for (i in 0...medalData.length) {
+			medals.push(new Medal(medalData[i], i));
+			log(medals[i]);
 		}
 		
-		log('${medals.length} medals initialized.');
+		log('${medals.length} medals initialized.'); // always plural, w/e
 		
 		// "n scoreboards initialized."
 		// savegroups: "SaveGroup: Name  Keys:   Ratings: "
@@ -154,7 +156,7 @@ class API {
 		return res;
 	}
 	
-	inline function log(s:String):Void {
-		Log.trace('[Newgrounds API] :: ${s}');
+	inline function log(any:Dynamic):Void {
+		Log.trace('[Newgrounds API] :: ${any}');
 	}
 }
