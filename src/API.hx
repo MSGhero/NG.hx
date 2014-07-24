@@ -18,10 +18,11 @@ class API {
 	var username:String;
 	var userId:UInt;
 	var sessionId:String;
+	var publisherId:Int;
 	
 	var medals:Array<Medal>;
 	
-	inline static var radix79:String = "/g8236klvBQ#&|;Zb*7CEA59%s`Oue1wziFp$rDVY@TKxUPWytSaGHJ>dmoMR^<0~4qNLhc(I+fjn)X";
+	inline static var RADIX79:String = "/g8236klvBQ#&|;Zb*7CEA59%s`Oue1wziFp$rDVY@TKxUPWytSaGHJ>dmoMR^<0~4qNLhc(I+fjn)X";
 	
 	public function new() {
 		
@@ -41,17 +42,18 @@ class API {
 		
 		var params = Lib.current.loaderInfo.parameters;
 		
-		if (params == null) {
-			username = null;
-			userId = 0;
-			sessionId = null;
-		}
-		
-		else {
+		if (params != null) {
 			username = params.NewgroundsAPI_UserName;
 			userId = Std.parseInt(params.NewgroundsAPI_UserID);
 			sessionId = params.NewgroundsAPI_SessionID;
+			publisherId = Std.parseInt(params.NewgroundsAPI_PublisherID);
 		}
+		
+		// defaults I think
+		if (username == null) username = "API-Debugger";
+		if (userId == 0) userId = 10;
+		if (sessionId == null) sessionId = "D3bu64p1U53R";
+		if (publisherId == 0) publisherId = 1;
 		
 		log("====== Newgrounds API v0.1 HAXE ======"); // more like version epsilon
 		log("Connecting to the Newgrounds API Gateway...");
@@ -68,7 +70,7 @@ class API {
 		medals = [];
 		var medalData = (o.medals:Array<Dynamic>);
 		for (i in 0...medalData.length) {
-			medals.push(new Medal(medalData[i], i));
+			medals.push(new Medal(medalData[i]));
 			log(medals[i]);
 		}
 		
@@ -79,6 +81,10 @@ class API {
 		// "n save group initialized."
 		
 		log("Connection complete!");
+		
+		// unlock medal test
+		var data = medals[0].getUnlockMedalData();
+		if (!medals[0].unlocked) sendEncrypted(data, 16, medals[0].unlockMedal);
 	}
 	
 	function showError(s:String):Void {
@@ -93,11 +99,12 @@ class API {
 	
 	function sendEncrypted(unsecure:Dynamic, seedLen:Int = 16, ?requestCallback:String->Void):Void {
 		
-		// unsecure is has everything needed except for seed and sessionid
+		// unsecure is has everything needed except for seed, publisherid, and sessionid
 		
 		// messy
 		var seed = getKey(seedLen);
 		unsecure.session_id = sessionId;
+		unsecure.publisher_id = publisherId;
 		var secure = Json.stringify(unsecure);
 		
 		var secureRC4 = Bytes.alloc(secure.length);
@@ -116,14 +123,14 @@ class API {
 			decimal = Std.parseInt(sixhex);
 			four = toBase79(decimal);
 			
-			while (four.length < 4) four = '${radix79.charAt(0)}${four}'; // there's a bug here if the last iteration grabs less than 6 chars, will look into it
+			while (sixhex.length == 8 && four.length < 4) four = '${RADIX79.charAt(0)}${four}';
 			compressed += four;
 		}
 		
 		compressed = '${encrypted.length % 6}${compressed}';
 		
 		var h = new Http("http://www.ngads.com/gateway_v2.php");
-		h.onData = requestCallback;
+		if (requestCallback != null) h.onData = requestCallback;
 		h.onError = showError;
 		h.onStatus = showStatus;
 		h.setHeader("Content-type", "application/x-www-form-urlencoded"); // no idea if this does anything
@@ -138,7 +145,7 @@ class API {
 	function getKey(length:Int):String {
 		var key = "";
 		for (i in 0...length) {
-			key += radix79.charAt(Std.int(Math.random() * 79));
+			key += RADIX79.charAt(Std.int(Math.random() * RADIX79.length));
 		}
 		return key;
 	}
@@ -149,14 +156,15 @@ class API {
 		var r:Int;
 		while (dec > 0) {
 			r = dec % 79;
-			res = '${radix79.charAt(r)}${res}';
+			res = '${RADIX79.charAt(r)}${res}';
 			dec = Std.int(dec / 79);
 		}
 		
 		return res;
 	}
 	
-	inline function log(any:Dynamic):Void {
+	public static function log(any:Dynamic):Void {
 		Log.trace('[Newgrounds API] :: ${any}');
+		// not sure how to make the project preview debug output recognize these
 	}
 }

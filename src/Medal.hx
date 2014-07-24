@@ -6,30 +6,47 @@ package ;
  */
 class Medal{
 
-	var name:String;
-	var desc:String;
-	var index:String;
-	var unlocked:Bool;
-	var secret:Bool;
-	var difficulty:Int;
-	var iconURL:String;
+	public var name(default, null):String;
+	public var desc(default, null):String;
+	public var id(default, null):Int;
+	public var unlocked(default, null):Bool;
+	public var secret(default, null):Bool;
+	public var difficulty(default, null):Int;
+	public var iconURL(default, null):String;
 	
 	static var difficulties:Array<String> = ["Easy", "Moderate", "Challenging", "Difficult", "Brutal"];
 	static var points:Array<Int> = [5, 10, 25, 50, 100];
 	
-	public function new(medalData:Dynamic, arrayIndex:Int) {
+	public function new(medalData:Dynamic) {
 		
 		name = medalData.medal_name;
 		desc = medalData.medal_description;
-		index = '${arrayIndex > 9 ? "" : "0"}${arrayIndex + 1}';
+		id = medalData.medal_id;
 		unlocked = medalData.unlocked;
 		secret = medalData.secret == 1;
 		difficulty = Std.int(medalData.medal_difficulty - 1);
 		iconURL = medalData.medal_icon;
 	}
 	
+	public function getUnlockMedalData():Dynamic { // static, pass in medal id?
+		
+		API.log('Unlocking medal "$name"...');
+		
+		return {
+			command_id:"unlockMedal",
+			medal_id:id
+		}
+	}
+	
+	@:allow(API)
+	private function unlockMedal(s:String):Void {
+		// parse success json?
+		unlocked = true;
+		API.log('Medal "$name" unlocked.');
+	}
+	
 	public function toString():String {
-		return 'Medal: $index. $name     (${unlocked ? "unlocked" : "locked"}, ${points[difficulty]} pts, ${difficulties[difficulty]}).';
+		return 'Medal: $name     (${unlocked ? "unlocked" : "locked"}, ${points[difficulty]} pts, ${difficulties[difficulty]}).';
 	}
 	
 }
