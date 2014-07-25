@@ -1,4 +1,5 @@
 package ;
+import haxe.Json;
 
 /**
  * ...
@@ -40,7 +41,7 @@ class Medal{
 	
 	@:allow(API)
 	private function unlockMedal(s:String):Void {
-		// parse success json?
+		if (Json.parse(s).success == 0) return; // print error?
 		unlocked = true;
 		API.log('Medal "$name" unlocked.');
 	}

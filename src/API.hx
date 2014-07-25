@@ -105,6 +105,7 @@ class API {
 		var seed = getKey(seedLen);
 		unsecure.session_id = sessionId;
 		unsecure.publisher_id = publisherId;
+		unsecure.seed = seed;
 		var secure = Json.stringify(unsecure);
 		
 		var secureRC4 = Bytes.alloc(secure.length);
