@@ -5,6 +5,7 @@ import haxe.Http;
 import haxe.io.Bytes;
 import haxe.Json;
 import haxe.Log;
+import saves.SaveGroup;
 
 /**
  * ...
@@ -21,6 +22,7 @@ class API {
 	var publisherId:Int;
 	
 	var medals:Array<Medal>;
+	var groups:Array<SaveGroup>;
 	
 	inline static var RADIX79:String = "/g8236klvBQ#&|;Zb*7CEA59%s`Oue1wziFp$rDVY@TKxUPWytSaGHJ>dmoMR^<0~4qNLhc(I+fjn)X";
 	
@@ -52,7 +54,7 @@ class API {
 		// defaults I think
 		if (username == null) username = "API-Debugger";
 		if (userId == 0) userId = 10;
-		if (sessionId == null) sessionId = "D3bu64p1U53R";
+		if (sessionId == null) sessionId = "D3bu64p1U53R"; // OMG IT SAYS DEBUG_API_USER
 		if (publisherId == 0) publisherId = 1;
 		
 		log("====== Newgrounds API v0.1 HAXE ======"); // more like version epsilon
@@ -77,14 +79,18 @@ class API {
 		log('${medals.length} medals initialized.'); // always plural, w/e
 		
 		// "n scoreboards initialized."
+		
+		groups = [];
+		var groupData = (o.save_groups:Array<Dynamic>);
+		for (i in 0...medalData.length) {
+			groups.push(new SaveGroup(groupData[i]));
+			// log(groups[i]);
+		}
 		// savegroups: "SaveGroup: Name  Keys:   Ratings: "
-		// "n save group initialized."
+		
+		log('${groups.length} save groups initialized.'); // double check, assumed it was this
 		
 		log("Connection complete!");
-		
-		// unlock medal test
-		var data = medals[0].getUnlockMedalData();
-		if (!medals[0].unlocked) sendEncrypted(data, 16, medals[0].unlockMedal);
 	}
 	
 	function showError(s:String):Void {

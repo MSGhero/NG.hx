@@ -41,9 +41,17 @@ class Medal{
 	
 	@:allow(API)
 	private function unlockMedal(s:String):Void {
-		if (Json.parse(s).success == 0) return; // print error?
-		unlocked = true;
-		API.log('Medal "$name" unlocked.');
+		
+		var o = Json.parse(s);
+		if (o.success == 0) {
+			API.log(o.error_msg);
+		}
+		
+		else {
+			unlocked = true;
+			API.log('Medal "$name" unlocked.');
+		}
+	
 	}
 	
 	public function toString():String {
