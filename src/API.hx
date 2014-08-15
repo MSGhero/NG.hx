@@ -13,20 +13,25 @@ import saves.SaveGroup;
  */
 class API {
 
-	var apiId:String = "37760:VcasLmE5"; // params for a test project I just made
-	var encryptionKey:String = "blnNtJNPbE9t2JAfxM0Dpx0yMxQL4rVW";
+	static var api:API;
 	
-	var username:String;
-	var userId:UInt;
-	var sessionId:String;
-	var publisherId:Int;
+	static var apiId:String;
+	static var encryptionKey:String;
 	
-	var medals:Array<Medal>;
-	var groups:Array<SaveGroup>;
+	static var username:String;
+	static var userId:UInt;
+	static var sessionId:String;
+	static var publisherId:Int;
+	
+	static var medals:Array<Medal>;
+	static var groups:Array<SaveGroup>;
 	
 	inline static var RADIX79:String = "/g8236klvBQ#&|;Zb*7CEA59%s`Oue1wziFp$rDVY@TKxUPWytSaGHJ>dmoMR^<0~4qNLhc(I+fjn)X";
 	
-	public function new() {
+	function new(_apiId:String, _encryptionKey:String) {
+		
+		apiId = _apiId;
+		encryptionKey = _encryptionKey;
 		
 		var h = new Http("http://www.ngads.com/gateway_v2.php");
 		h.onData = onRequest;
@@ -61,14 +66,38 @@ class API {
 		log("Connecting to the Newgrounds API Gateway...");
 	}
 	
-	function onRequest(s:String):Void {
+	public static function connect(apiId:String, encryptionKey:String):Void { // movie version
+		api = new API(apiId, encryptionKey);
+	}
+	
+	public static function log(any:Dynamic):Void {
+		Log.trace('[Newgrounds API] :: ${any}');
+		// not sure how to make the project preview debug output recognize these
+	}
+	
+	public static function getSaveGroupByName(groupName:String):SaveGroup {
+		for (group in groups)
+			if (group.name == groupName) return group;
+		return null;
+	}
+	
+	public static function getSaveGroupById(id:UInt):SaveGroup {
+		for (group in groups)
+			if (group.id == id) return group;
+		return null;
+	}
+	
+	
+	// private, @:access
+	
+	static function onRequest(s:String):Void {
 		
 		var o = Json.parse(s);
 		
 		if (o.success == 0) return; // just in case
 		
 		log('----- ${o.movie_name} -----');
-		
+		log(o);
 		medals = [];
 		var medalData = (o.medals:Array<Dynamic>);
 		for (i in 0...medalData.length) {
@@ -93,17 +122,17 @@ class API {
 		log("Connection complete!");
 	}
 	
-	function showError(s:String):Void {
+	static function showError(s:String):Void {
 		log("Error when sending command:");
 		log(s);
 		log("Unable to connect to the API.");
 	}
 	
-	function showStatus(i:Int):Void {
+	static function showStatus(i:Int):Void {
 		// Log.trace(i);
 	}
 	
-	function sendEncrypted(unsecure:Dynamic, seedLen:Int = 16, ?requestCallback:String->Void):Void {
+	static function sendEncrypted(unsecure:Dynamic, seedLen:Int = 16, ?requestCallback:String->Void):Void {
 		
 		// unsecure is has everything needed except for seed, publisherid, and sessionid
 		
@@ -149,7 +178,7 @@ class API {
 		h.request(true);
 	}
 	
-	function getKey(length:Int):String {
+	static function getKey(length:Int):String {
 		var key = "";
 		for (i in 0...length) {
 			key += RADIX79.charAt(Std.int(Math.random() * RADIX79.length));
@@ -157,7 +186,7 @@ class API {
 		return key;
 	}
 	
-	function toBase79(dec:Int):String {
+	static function toBase79(dec:Int):String {
 		
 		var res = "";
 		var r:Int;
@@ -168,10 +197,5 @@ class API {
 		}
 		
 		return res;
-	}
-	
-	public static function log(any:Dynamic):Void {
-		Log.trace('[Newgrounds API] :: ${any}');
-		// not sure how to make the project preview debug output recognize these
 	}
 }
