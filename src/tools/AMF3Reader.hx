@@ -24,54 +24,79 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
  */
-package ;
+package tools;
+import tools.Value;
 
-class ArcFour {
+class AMF3Reader {
 
-	var s : haxe.io.Bytes;
-	var sbase : haxe.io.Bytes;
-	var i : Int;
-	var j : Int;
+	var i : haxe.io.Input;
 
-	public function new( key : haxe.io.Bytes ) {
-		var s = haxe.io.Bytes.alloc(256);
-		for( i in 0...256 )
-			s.set(i,i);
-		var j = 0;
-		var klen = key.length;
-		for( i in 0...256 ) {
-			j = (j + s.get(i) + key.get(i % klen)) & 255;
-			var tmp = s.get(i);
-			s.set(i,s.get(j));
-			s.set(j,tmp);
-		}
-		sbase = s;
-		this.s = sbase.sub(0,256);
-		this.i = 0;
-		this.j = 0;
-	}
-
-	public function reset() {
-		this.i = 0;
-		this.j = 0;
-		this.s.blit(0,sbase,0,256);
-	}
-
-	public function run( input : haxe.io.Bytes, ipos : Int, length : Int, output : haxe.io.Bytes, opos : Int ) {
-		var i = this.i;
-		var j = this.j;
-		var s = this.s;
-		for( p in 0...length ) {
-			i = (i + 1) & 255;
-			var a = s.get(i);
-			j = (j + a) & 255;
-			var b = s.get(j);
-			s.set(i,b);
-			s.set(j,a);
-			output.set(opos + p, input.get(ipos + p) ^ s.get((a+b)&255) );
-		}
+	public function new( i : haxe.io.Input ) {
 		this.i = i;
-		this.j = j;
+		i.bigEndian = true;
 	}
 
+	function readObject() {
+		var h = new Map();
+		while( true ) {
+			var c1 = i.readByte();
+			var c2 = i.readByte();
+			var name = i.readString((c1 << 8) | c2);
+			var k = i.readByte();
+			if( k == 0x09 )
+				break;
+			h.set(name,readWithCode(k));
+		}
+		return h;
+	}
+
+	function readArray(n : Int) {
+		var a = new Array();
+		read();
+		for( i in 0...n )
+			a.push(read());
+		return a;
+	}
+	
+	function readInt() {
+		var ret = 0;
+		var c = i.readByte();
+		while (c > 0x7f) {
+			ret |= c & 0x7f;
+			ret <<= 7;
+			c = i.readByte();
+		}
+		if (ret > 0xfffff) ret <<= 1;
+		ret |= c;
+		return ret;
+	}
+
+	public function readWithCode( id ) {
+		var i = this.i;
+		return switch( id ) {
+		case 0x00:
+			AUndefined;
+		case 0x01:
+			ANull;
+		case 0x02:
+			ABool(false);
+		case 0x03:
+			ABool(true);
+		case 0x04:
+			AInt( readInt() ); // fancy int reading bytes stuff
+		case 0x05:
+			ANumber( i.readDouble() );
+		case 0x06:
+			AString( i.readString(readInt() >> 1) ); // last bit of "length" byte is something idk, get rid of it
+		case 0x09:
+			AArray( readArray(readInt() >> 1) ); // something else here
+		// plus some other ones
+		default:
+			throw "Unknown AMF "+id;
+		}
+	}
+
+	public function read() {
+		return readWithCode(i.readByte());
+	}
 }

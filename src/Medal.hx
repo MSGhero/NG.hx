@@ -29,7 +29,8 @@ class Medal{
 		iconURL = medalData.medal_icon;
 	}
 	
-	public function getUnlockMedalData():Dynamic { // static, pass in medal id?
+	@:allow(API)
+	private function getUnlockMedalData():Dynamic {
 		
 		API.log('Unlocking medal "$name"...');
 		

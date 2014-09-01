@@ -22,6 +22,7 @@ class SaveGroup{
 		
 		keys = [];
 		var keyData = (groupData.keys:Array<Dynamic>);
+		if (keyData == null) keyData = [];
 		for (i in 0...keyData.length) {
 			keys.push(new SaveKey(keyData[i]));
 			// API.log(keys[i]);
@@ -30,8 +31,18 @@ class SaveGroup{
 		// groupData.ratings
 	}
 	
-	// getKeyById:UInt->SaveKey
-	// getKey:String->SaveKey
+	public function getKeyById(id:UInt):SaveKey {
+		for (key in keys)
+			if (key.id == id) return key;
+		return null;
+	}
+	
+	public function getKey(name:String):SaveKey {
+		for (key in keys)
+			if (key.name == name) return key;
+		return null;
+	}
+	
 	// getRatingById:UInt->SaveRating
 	// getRating:String->SaveRating
 	

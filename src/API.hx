@@ -1,14 +1,17 @@
 package;
 import flash.Lib;
+import format.tools.ArcFour;
 import haxe.crypto.Md5;
 import haxe.Http;
 import haxe.io.Bytes;
 import haxe.Json;
 import haxe.Log;
+import saves.SaveFile;
 import saves.SaveGroup;
+import saves.SaveQuery;
 
 /**
- * ...
+ * The Newgrounds API for Haxe.
  * @author MSGHero
  */
 class API {
@@ -70,9 +73,37 @@ class API {
 		api = new API(apiId, encryptionKey);
 	}
 	
+	public static function unlockMedal(medalName:String):Void {
+		
+		var medal:Medal = null;
+		for (m in medals)
+			if (m.name == medalName) medal = m;
+		
+		if (medal == null) return; // do something else? log?
+		sendEncrypted(medal.getUnlockMedalData(), medal.unlockMedal);
+	}
+	
 	public static function log(any:Dynamic):Void {
 		Log.trace('[Newgrounds API] :: ${any}');
-		// not sure how to make the project preview debug output recognize these
+		// not sure how to make the project preview debug output recognize these, prolly some externalinterface call
+	}
+	
+	public static function createSaveFile(groupName:String):SaveFile {
+		// idk
+		return null;
+	}
+	
+	public static function loadSaveFile(saveId:UInt, loadContents:Bool):Void {
+		
+		// callback after loading metadata, or callback after loading file contents?
+		
+		var h = new Http("http://www.ngads.com/gateway_v2.php");
+		
+		// log msg
+		h.setParameter("command_id", "loadSaveFile");
+		h.setParameter("save_id", Std.string(saveId));
+		// sendunencrypted
+		// idk
 	}
 	
 	public static function getSaveGroupByName(groupName:String):SaveGroup {
@@ -100,6 +131,7 @@ class API {
 		log(o);
 		medals = [];
 		var medalData = (o.medals:Array<Dynamic>);
+		if (medalData == null) medalData = [];
 		for (i in 0...medalData.length) {
 			medals.push(new Medal(medalData[i]));
 			log(medals[i]);
@@ -111,6 +143,7 @@ class API {
 		
 		groups = [];
 		var groupData = (o.save_groups:Array<Dynamic>);
+		if (groupData == null) groupData = [];
 		for (i in 0...medalData.length) {
 			groups.push(new SaveGroup(groupData[i]));
 			// log(groups[i]);
@@ -120,6 +153,18 @@ class API {
 		log('${groups.length} save groups initialized.'); // double check, assumed it was this
 		
 		log("Connection complete!");
+		
+		var q = new SaveQuery(groups[0]);
+		// q.addCondition(AUTHOR_ID, EQUALS, 3611941);
+		q.execute(lookAtFiles);
+	}
+	
+	static function lookAtFiles(sq:SaveQuery):Void {
+		for (save in sq.files) {
+			log([save.authorId, save.id, save.description]);
+		}
+		
+		sq.files[sq.files.length - 1].load();
 	}
 	
 	static function showError(s:String):Void {
@@ -132,7 +177,21 @@ class API {
 		// Log.trace(i);
 	}
 	
-	static function sendEncrypted(unsecure:Dynamic, seedLen:Int = 16, ?requestCallback:String->Void):Void {
+	@:allow(saves)
+	static function sendUnencrypted(http:Http, ?requestCallback:String->Void):Void {
+		
+		if (requestCallback != null) http.onData = requestCallback;
+		http.onError = showError;
+		http.onStatus = showStatus;
+		http.setHeader("Content-type", "application/x-www-form-urlencoded");
+		http.addParameter("tracker_id", apiId);
+		http.addParameter("publisher_id", Std.string(publisherId));
+		
+		http.request(true);
+	}
+	
+	@:allow(saves)
+	static function sendEncrypted(unsecure:Dynamic, ?requestCallback:String->Void, seedLen:Int = 16):Void {
 		
 		// unsecure is has everything needed except for seed, publisherid, and sessionid
 		
@@ -169,7 +228,7 @@ class API {
 		if (requestCallback != null) h.onData = requestCallback;
 		h.onError = showError;
 		h.onStatus = showStatus;
-		h.setHeader("Content-type", "application/x-www-form-urlencoded"); // no idea if this does anything
+		h.setHeader("Content-type", "application/x-www-form-urlencoded");
 		h.addParameter("command_id", "securePacket");
 		h.addParameter("tracker_id", apiId);
 		h.addParameter("seed", seed);
