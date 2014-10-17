@@ -16,6 +16,12 @@ import saves.SaveQuery;
  */
 class API {
 
+	
+	// maybe i should make an API command obj
+	// encrypted:Bool, pass in datam it does rest
+	// outside of api class at least
+	
+	
 	static var api:API;
 	
 	static var apiId:String;
@@ -30,14 +36,16 @@ class API {
 	static var groups:Array<SaveGroup>;
 	
 	inline static var RADIX79:String = "/g8236klvBQ#&|;Zb*7CEA59%s`Oue1wziFp$rDVY@TKxUPWytSaGHJ>dmoMR^<0~4qNLhc(I+fjn)X";
+	public inline static var API_PATH:String = "http://www.ngads.com/gateway_v2.php/";
+	public inline static var IMAGE_FILE_PATH:String = "http://apifiles.ngfiles.com/savedata/";
 	
 	function new(_apiId:String, _encryptionKey:String) {
 		
 		apiId = _apiId;
 		encryptionKey = _encryptionKey;
 		
-		var h = new Http("http://www.ngads.com/gateway_v2.php");
-		h.onData = onRequest;
+		var h = new Http(API_PATH);
+		h.onData = onInitRequest;
 		h.onError = showError;
 		h.onStatus = showStatus;
 		h.setHeader("Content-type", "application/x-www-form-urlencoded"); // no idea if this does anything
@@ -62,10 +70,10 @@ class API {
 		// defaults I think
 		if (username == null) username = "API-Debugger";
 		if (userId == 0) userId = 10;
-		if (sessionId == null) sessionId = "D3bu64p1U53R"; // OMG IT SAYS DEBUG_API_USER
+		if (sessionId == null) sessionId = "D3bu64p1U53R";
 		if (publisherId == 0) publisherId = 1;
 		
-		log("====== Newgrounds API v0.1 HAXE ======"); // more like version epsilon
+		log("====== Newgrounds API v0.1 HAXE ======");
 		log("Connecting to the Newgrounds API Gateway...");
 	}
 	
@@ -89,20 +97,39 @@ class API {
 	}
 	
 	public static function createSaveFile(groupName:String):SaveFile {
-		// idk
-		return null;
+		
+		// time zone?
+		var date = Date.now().toString();
+		
+		var data = {
+			save_id : 0, // ?
+			filename : "",
+			user_id : userId,
+			user_name : username,
+			created_date : date,
+			updated_date : date,
+			views : 0,
+			description : "",
+			group_id : getSaveGroupByName(groupName).id,
+		}
+		
+		// save file, get save_id from callback
+		
+		return new SaveFile(data);
 	}
 	
 	public static function loadSaveFile(saveId:UInt, loadContents:Bool):Void {
 		
 		// callback after loading metadata, or callback after loading file contents?
 		
-		var h = new Http("http://www.ngads.com/gateway_v2.php");
+		var h = new Http(API_PATH);
 		
 		// log msg
 		h.setParameter("command_id", "loadSaveFile");
 		h.setParameter("save_id", Std.string(saveId));
-		// sendunencrypted
+		h.setParameter("get_contents", Std.string(loadContents));
+		sendUnencrypted(h, populateSaveFile);
+		
 		// idk
 	}
 	
@@ -121,7 +148,7 @@ class API {
 	
 	// private, @:access
 	
-	static function onRequest(s:String):Void {
+	static function onInitRequest(s:String):Void {
 		
 		var o = Json.parse(s);
 		
@@ -154,17 +181,31 @@ class API {
 		
 		log("Connection complete!");
 		
-		var q = new SaveQuery(groups[0]);
+		
+		// TESTING
+		// var q = new SaveQuery(groups[0]);
 		// q.addCondition(AUTHOR_ID, EQUALS, 3611941);
-		q.execute(lookAtFiles);
+		// q.execute(lookAtFiles);
+		loadSaveFile(710154, true);
 	}
 	
 	static function lookAtFiles(sq:SaveQuery):Void {
 		for (save in sq.files) {
 			log([save.authorId, save.id, save.description]);
+			log(save.id);
 		}
 		
 		sq.files[sq.files.length - 1].load();
+	}
+	
+	static function populateSaveFile(s:String):Void {
+		var o = Json.parse(s);
+		
+		if (o.success == 1) {
+			o.file.group_id = o.group_id;
+			var s = new SaveFile(o.file);
+			if (o.get_contents) s.load();
+		}
 	}
 	
 	static function showError(s:String):Void {
@@ -224,7 +265,7 @@ class API {
 		
 		compressed = '${encrypted.length % 6}${compressed}';
 		
-		var h = new Http("http://www.ngads.com/gateway_v2.php");
+		var h = new Http(API_PATH);
 		if (requestCallback != null) h.onData = requestCallback;
 		h.onError = showError;
 		h.onStatus = showStatus;

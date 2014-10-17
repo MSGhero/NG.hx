@@ -41,7 +41,7 @@ class SaveQuery{
 			file_conditions:conditions
 		};
 		
-		var h = new Http("http://www.ngads.com/gateway_v2.php");
+		var h = new Http(API.API_PATH);
 		
 		h.addParameter("command_id", "lookupSaveFiles");
 		h.addParameter("group_id", Std.string(group.id));

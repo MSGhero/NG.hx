@@ -1,15 +1,16 @@
 package saves;
-import format.amf.Reader;
+import haxe.ds.StringMap;
 import haxe.Http;
 import haxe.io.Bytes;
 import haxe.io.BytesInput;
+import haxe.io.BytesOutput;
+import haxe.Json;
 import haxe.Utf8;
+import haxe.zip.Compress;
 import haxe.zip.InflateImpl;
-import openfl.Lib;
-import openfl.utils.ByteArray;
-import openfl.utils.Endian;
-import tools.AMF3Reader;
-import tools.Tools;
+import format.amf3.Reader;
+import format.amf3.Tools;
+import format.amf3.Writer;
 
 /**
  * ...
@@ -27,12 +28,18 @@ class SaveFile{
 	public var updatedDate(default, null):String;
 	public var views(default, null):UInt;
 	public var status(default, null):UInt;
-	public var file(default, null):String;
+	public var filePath(default, null):String;
 	public var thumb(default, null):String;
+	public var thumbPath(default, null):String;
+	// thumb bytes, maybe abstract fromBytes/fromString
 	public var description(default, null):String;
 	public var keys(default, null):Array<SaveKey>;
 	public var ratings(default, null):Array<SaveKey>;
 	public var group(default, null):SaveGroup;
+	
+	public static inline var DEFAULT_ICON:String = "iVBORw0KGgoAAAANSUhEUgAAAFoAAABaCAIAAAC3ytZVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAvSURBVHhe7cExAQAAAMKg9U9tDQ8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4UQNfRgAB+7kmYgAAAABJRU5ErkJggg==";
+	public static inline var ICON_WIDTH:Int = 90;
+	public static inline var ICON_HEIGHT:Int = 90;
 	
 	public function new(fileData:Dynamic) {
 		
@@ -42,13 +49,14 @@ class SaveFile{
 		name = fileData.filename;
 		authorId = fileData.user_id;
 		authorName = fileData.user_name;
-		Lib.trace(fileData.created);
 		createdDate = fileData.created;
 		updatedDate = fileData.last_update;
 		views = fileData.views;
 		
-		file = fileData.file;
-		thumb = fileData.thumb;
+		if (fileData.file != null) filePath = fileData.file;
+		else fileData = { };
+		if (fileData.thumb != null) thumbPath = fileData.thumb;
+		else thumb = DEFAULT_ICON;
 		
 		description = fileData.description;
 		group = API.getSaveGroupById(fileData.group_id);
@@ -65,14 +73,21 @@ class SaveFile{
 	}
 	
 	public function save():Void {
-		API.sendEncrypted(getSaveData()); // callback?
+		API.sendEncrypted(getSaveData(), setSaveStuff);
 	}
 	
 	public function load():Void {
-		if (file != null) {
-			Lib.trace(file);
-			var h = new Http("http://www.ngads.com/" + file);
+		
+		if (filePath != null) {
+			API.log("http://www.ngads.com/" + filePath);
+			var h = new Http("http://www.ngads.com/" + filePath);
 			h.onData = uncompress;
+			h.request(false);
+		}
+		if (thumbPath != null) {
+			var h = new Http(API.IMAGE_FILE_PATH + thumbPath);
+			h.onData = getThumbnail;
+			h.onError = API.log;
 			h.request(false);
 		}
 	}
@@ -91,37 +106,75 @@ class SaveFile{
 		}
 		
 		var out = InflateImpl.run(new BytesInput(b));
-		Lib.trace(out.toHex());
-		Lib.trace(out.toString());
-		// FORMAT.AMF.READER.READOBJECT!!!
-		// need amf3 tho, not amf0
+		var o = new Reader(new BytesInput(out));
+		var sm:StringMap<Dynamic> = Tools.decode(o.read());
 		
-		var o = new AMF3Reader(new BytesInput(out));
-		Lib.trace(Tools.string(o.read()));
-		/*var ba = new ByteArray();
-		ba.writeUTFBytes(out.toString());
-		ba.position = 0;
-		var o = ba.readObject();*/
-		
+		for (k in sm.keys()) {
+			API.log([k, sm.get(k)]);
+			Reflect.setField(data, k, sm.get(k));
+		}
 		
 		// + extra callback
+	}
+	
+	private function compress():String {
+		
+		data = {s:"175450"};
+		
+		var d = Tools.encode(data);
+		var o = new BytesOutput();
+		var i = new Writer(o);
+		i.write(d);
+		
+		return Compress.run(o.getBytes(), 9).toHex(); // zip level compression
 	}
 	
 	private function getSaveData():Dynamic {
 		
 		// log msg
 		
+		API.log([group.id, id, name, compress()]);
+		
 		return {
-			command_id:"saveFile",
-			group:group.id,
-			save_id:id, // overwrite file: save_id: id
-			filename:name,
+			command_id : "saveFile",
+			group : group.id,
+			save_id : id, // overwrite file: save_id: id
+			filename : name,
+			file : compress(),
+			thumbnail : 'data:image/png;base64,$DEFAULT_ICON',
 			// optional desc
 			// optional status
 			// optional keys
-			// file: "binary file or text blob"?
-			// thumbnail
 		}
+	}
+	
+	private function setSaveStuff(s:String):Void {
+		API.log(s);
+		var o = Json.parse(s);
+		
+		if (o.success == 1) {
+			group = API.getSaveGroupById(o.group_id);
+			id = o.save_id;
+			name = o.filename;
+			filePath = o.file_url;
+			thumbPath = o.thumbnail;
+			// iconpath = o.icon;
+		}
+	}
+	
+	private function getThumbnail(s:String):Void {
+		thumb = s;
+		
+		save();
+	}
+	
+	public function setThumbnail(imgBytes:Bytes):String {
+		
+		var o = new BytesOutput();
+		var w = new format.png.Writer(o);
+		w.write(format.png.Tools.build32ARGB(ICON_WIDTH, ICON_HEIGHT, imgBytes));
+		// thumbbytes
+		return thumb = o.getBytes().toString();
 	}
 	
 	/*
@@ -155,11 +208,6 @@ icon
 keys
 ratings
 readOnly
-
-Constants
-DEFAULT_ICON:BitmapData
-ICON_HEIGHT = 90
-ICON_WIDTH = 90
 	 * 
 	*/
 }
