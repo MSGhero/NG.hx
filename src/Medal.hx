@@ -29,34 +29,30 @@ class Medal{
 		iconURL = medalData.medal_icon;
 	}
 	
-	@:allow(API)
-	private function getUnlockMedalData():Dynamic {
+	public function unlockMedal():Void {
 		
-		API.log('Unlocking medal "$name"...');
-		
-		return {
-			command_id:"unlockMedal",
-			medal_id:id
+		if (unlocked) {
+			API.log('Medal ($name) already unlocked.');
+			return;
 		}
+		
+		var ac = new APICommand("unlockMedal");
+		ac.addParam("session_id", API.sessionId, true).addParam("medal_id", id, true);
+		ac.onData = unlock;
+		ac.send();
 	}
 	
-	@:allow(API)
-	private function unlockMedal(s:String):Void {
+	function unlock(s:String):Void {
 		
 		var o = Json.parse(s);
-		if (o.success == 0) {
-			API.log(o.error_msg);
-		}
-		
-		else {
+		if (o.success == 1) {
 			unlocked = true;
-			API.log('Medal "$name" unlocked.');
+			API.log('Unlocked ${toString()}');
 		}
-	
 	}
 	
 	public function toString():String {
-		return 'Medal: $name     (${unlocked ? "unlocked" : "locked"}, ${points[difficulty]} pts, ${difficulties[difficulty]}).';
+		return 'Medal: $name (${unlocked ? "unlocked" : "locked"}, ${points[difficulty]} pts, ${difficulties[difficulty]}).';
 	}
 	
 }

@@ -1,7 +1,5 @@
 package saves;
-import haxe.Http;
 import haxe.Json;
-import openfl.Lib;
 
 /**
  * ...
@@ -33,35 +31,38 @@ class SaveQuery{
 		
 		callback = onQueryCallback;
 		
-		var query = {
+		// props
+		var query:Dynamic = {
 			num_results:30,
 			page:1,
-			first_result:0,
-			randomize:false,
-			file_conditions:conditions
 		};
 		
-		var h = new Http(API.API_PATH);
+		// randomize=1 if true, no param if false
+		if (conditions.length > 0) query.file_conditions = conditions;
 		
-		h.addParameter("command_id", "lookupSaveFiles");
-		h.addParameter("group_id", Std.string(group.id));
-		h.addParameter("query", Json.stringify(query));
+		var queryString = Json.stringify(query);
 		
-		API.sendUnencrypted(h, setSaveFiles);
+		var ac = new APICommand("lookupSaveFiles");
+		ac.addParam("group_id", group.id).addParam("publisher_id", API.publisherId).addParam("query", queryString);
+		ac.onData = setSaveFiles;
+		ac.send();
 	}
 	
-	private function setSaveFiles(s:String):Void {
+	function setSaveFiles(s:String):Void {
 		
 		var o = Json.parse(s);
-		// invalid json parse input: "An internal server error has occurred..." when i have conditions
 		
 		if (o.success == 1) {
+			
+			var i = 0;
 			
 			var saveFiles = (o.files:Array<Dynamic>);
 			if (saveFiles == null) saveFiles = [];
 			for (file in saveFiles) {
+				Main.tf.appendText('${file.user_name}: ${file.last_update}\n');
 				files.push(new SaveFile(file));
 			}
+			files[files.length - 1].load();
 		}
 		
 		if (callback != null) callback(this);
@@ -75,15 +76,15 @@ typedef QueryCondition = {
 }
 
 @:enum
-abstract QueryField(String) {
-	var AUTHOR_ID = "authorId";
-	var AUTHOR_NAME = "authorName";
-	var CREATED_ON = "createdOn";
-	var FILE_ID = "fileId";
-	var FILE_NAME = "fileName";
-	var FILE_STATUS = "fileStatus";
-	var FILE_VIEWS = "fileViews";
-	var UPDATED_ON = "updatedOn";
+abstract QueryField(Int) {
+	var FILE_ID = 0;
+	var AUTHOR_ID = 1;
+	var AUTHOR_NAME = 2;
+	var FILE_NAME = 3;
+	var CREATED_ON = 4;
+	var UPDATED_ON = 5;
+	var FILE_VIEWS = 6;
+	var FILE_STATUS = 7;
 }
 
 @:enum

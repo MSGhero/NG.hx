@@ -1,16 +1,15 @@
 package saves;
+import format.amf3.Reader;
+import format.amf3.Tools;
+import format.amf3.Writer;
 import haxe.ds.StringMap;
 import haxe.Http;
 import haxe.io.Bytes;
 import haxe.io.BytesInput;
 import haxe.io.BytesOutput;
 import haxe.Json;
-import haxe.Utf8;
 import haxe.zip.Compress;
-import haxe.zip.InflateImpl;
-import format.amf3.Reader;
-import format.amf3.Tools;
-import format.amf3.Writer;
+import haxe.zip.Uncompress;
 
 /**
  * ...
@@ -21,7 +20,7 @@ class SaveFile{
 	public var data:Dynamic;
 	
 	public var id(default, null):UInt;
-	public var name(default, null):String;
+	public var name:String;
 	public var authorId(default, null):UInt;
 	public var authorName(default, null):String;
 	public var createdDate(default, null):String;
@@ -37,6 +36,7 @@ class SaveFile{
 	public var ratings(default, null):Array<SaveKey>;
 	public var group(default, null):SaveGroup;
 	
+	// needed?
 	public static inline var DEFAULT_ICON:String = "iVBORw0KGgoAAAANSUhEUgAAAFoAAABaCAIAAAC3ytZVAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAAvSURBVHhe7cExAQAAAMKg9U9tDQ8gAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA4UQNfRgAB+7kmYgAAAABJRU5ErkJggg==";
 	public static inline var ICON_WIDTH:Int = 90;
 	public static inline var ICON_HEIGHT:Int = 90;
@@ -54,11 +54,11 @@ class SaveFile{
 		views = fileData.views;
 		
 		if (fileData.file != null) filePath = fileData.file;
-		else fileData = { };
 		if (fileData.thumb != null) thumbPath = fileData.thumb;
 		else thumb = DEFAULT_ICON;
 		
 		description = fileData.description;
+		
 		group = API.getSaveGroupById(fileData.group_id);
 		
 		keys = [];
@@ -73,99 +73,96 @@ class SaveFile{
 	}
 	
 	public function save():Void {
-		API.sendEncrypted(getSaveData(), setSaveStuff);
+		
+		if (data == null) data = { };
+		
+		// encodeData
+		// preEncodeObject for bmds
+		// encodeObject
+		
+		var ac = new APICommand("saveFile");
+		
+		ac.addParam("group", group.id, true).addParam("user_name", API.username, true).addParam("filename", name, true).addParam("description", description, true);
+		if (id != 0) ac.addParam("save_id", id, true).addParam("overwrite", true, true);
+		// draft?, keys, ratings
+		ac.addFile("file", compress(), "file");
+		
+		// if icon loaded
+		// ac.addFile("thumbnail", Bytes.ofString(thumb), "thumbnail"); maybe
+		
+		ac.onData = setStuff;
+		ac.onError = API.log;
+		ac.send();
+		
+		// callback
 	}
 	
 	public function load():Void {
 		
 		if (filePath != null) {
-			API.log("http://www.ngads.com/" + filePath);
 			var h = new Http("http://www.ngads.com/" + filePath);
 			h.onData = uncompress;
+			h.onError = API.log;
 			h.request(false);
 		}
 		if (thumbPath != null) {
 			var h = new Http(API.IMAGE_FILE_PATH + thumbPath);
 			h.onData = getThumbnail;
-			h.onError = API.log;
+			//h.onError = API.log;
 			h.request(false);
 		}
 	}
 	
-	private function uncompress(s:String):Void {
+	function uncompress(s:String):Void {
 		
-		var a = [];
-		for (i in 0...s.length) {
-			a.push(Utf8.charCodeAt(s, i));
+		// there are issues with callback data including 0x00 bytes, nothing I can do about it
+		var o = new Reader(new BytesInput(Uncompress.run(Bytes.ofString(s))));
+		var d:Dynamic = Tools.decode(o.read());
+		
+		if (Std.is(d, StringMap)) {
+			
+			var sm:StringMap<Dynamic> = d;
+			
+			for (k in sm.keys()) {
+				Reflect.setField(data, k, sm.get(k));
+			}
 		}
 		
-		var b = Bytes.alloc(a.length);
-		
-		for (i in 0...a.length) {
-			b.set(i, a[i]);
-		}
-		
-		var out = InflateImpl.run(new BytesInput(b));
-		var o = new Reader(new BytesInput(out));
-		var sm:StringMap<Dynamic> = Tools.decode(o.read());
-		
-		for (k in sm.keys()) {
-			API.log([k, sm.get(k)]);
-			Reflect.setField(data, k, sm.get(k));
+		else {
+			data = d;
 		}
 		
 		// + extra callback
 	}
 	
-	private function compress():String {
+	function compress():Bytes {
 		
-		data = {s:"175450"};
-		
-		var d = Tools.encode(data);
 		var o = new BytesOutput();
 		var i = new Writer(o);
-		i.write(d);
+		i.write(Tools.encode(data));
 		
-		return Compress.run(o.getBytes(), 9).toHex(); // zip level compression
+		return Compress.run(o.getBytes(), 9);
 	}
 	
-	private function getSaveData():Dynamic {
+	function setStuff(s:String):Void {
 		
-		// log msg
-		
-		API.log([group.id, id, name, compress()]);
-		
-		return {
-			command_id : "saveFile",
-			group : group.id,
-			save_id : id, // overwrite file: save_id: id
-			filename : name,
-			file : compress(),
-			thumbnail : 'data:image/png;base64,$DEFAULT_ICON',
-			// optional desc
-			// optional status
-			// optional keys
-		}
-	}
-	
-	private function setSaveStuff(s:String):Void {
-		API.log(s);
 		var o = Json.parse(s);
-		
 		if (o.success == 1) {
+			
 			group = API.getSaveGroupById(o.group_id);
 			id = o.save_id;
 			name = o.filename;
 			filePath = o.file_url;
 			thumbPath = o.thumbnail;
-			// iconpath = o.icon;
+			// 50x50 icon location
 		}
 	}
 	
-	private function getThumbnail(s:String):Void {
+	// idk
+	function getThumbnail(s:String):Void {
 		thumb = s;
-		
-		save();
+		// var b = Bytes.ofString(s);
+		//save();
 	}
 	
 	public function setThumbnail(imgBytes:Bytes):String {
@@ -173,7 +170,7 @@ class SaveFile{
 		var o = new BytesOutput();
 		var w = new format.png.Writer(o);
 		w.write(format.png.Tools.build32ARGB(ICON_WIDTH, ICON_HEIGHT, imgBytes));
-		// thumbbytes
+		// thumbbytes?
 		return thumb = o.getBytes().toString();
 	}
 	
