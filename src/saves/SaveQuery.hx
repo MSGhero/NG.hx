@@ -64,7 +64,6 @@ class SaveQuery{
 			var saveFiles = (o.files:Array<Dynamic>);
 			if (saveFiles == null) saveFiles = [];
 			for (file in saveFiles) {
-				Main.tf.appendText('${file.user_name}: ${file.last_update}\n');
 				files.push(new SaveFile(file));
 			}
 			files[files.length - 1].load();
