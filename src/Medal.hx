@@ -2,7 +2,7 @@ package ;
 import haxe.Json;
 
 /**
- * ...
+ * Medals to be unlocked.
  * @author MSGHero
  */
 class Medal{
@@ -33,13 +33,14 @@ class Medal{
 		
 		if (unlocked) {
 			API.log('Medal ($name) already unlocked.');
-			return;
 		}
 		
-		var ac = new APICommand("unlockMedal");
-		ac.addParam("session_id", API.sessionId, true).addParam("medal_id", id, true);
-		ac.onData = unlock;
-		ac.send();
+		else {
+			var ac = new APICommand("unlockMedal");
+			ac.addParam("session_id", API.sessionId, true).addParam("medal_id", id, true);
+			ac.onData = unlock;
+			ac.send();
+		}
 	}
 	
 	function unlock(s:String):Void {

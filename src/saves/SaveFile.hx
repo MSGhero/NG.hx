@@ -12,7 +12,7 @@ import haxe.zip.Compress;
 import haxe.zip.Uncompress;
 
 /**
- * ...
+ * Stores save data from NG's servers.
  * @author MSGHero
  */
 class SaveFile{
@@ -83,7 +83,7 @@ class SaveFile{
 		var ac = new APICommand("saveFile");
 		
 		ac.addParam("group", group.id, true).addParam("user_name", API.username, true).addParam("filename", name, true).addParam("description", description, true);
-		if (id != 0) ac.addParam("save_id", id, true).addParam("overwrite", true, true);
+		if (id != -1) ac.addParam("save_id", id, true).addParam("overwrite", true, true);
 		// draft?, keys, ratings
 		ac.addFile("file", compress(), "file");
 		
@@ -108,14 +108,14 @@ class SaveFile{
 		if (thumbPath != null) {
 			var h = new Http(API.IMAGE_FILE_PATH + thumbPath);
 			h.onData = getThumbnail;
-			//h.onError = API.log;
+			h.onError = API.log;
 			h.request(false);
 		}
 	}
 	
 	function uncompress(s:String):Void {
 		
-		// there are issues with callback data including 0x00 bytes, nothing I can do about it
+		// there are issues with callback data including 0x00 bytes, have to replace haxe.Http (bleh)
 		var o = new Reader(new BytesInput(Uncompress.run(Bytes.ofString(s))));
 		var d:Dynamic = Tools.decode(o.read());
 		
@@ -173,38 +173,35 @@ class SaveFile{
 		// thumbbytes?
 		return thumb = o.getBytes().toString();
 	}
-	
-	/*
-status - 1=private, 2=shared, 3=unapproved, 4=approved
-keys - An array of key objects associated with this file, each containing the following properties:
-	id - The ID of the key
-	value - The value of the key
-ratings - An array of rating objects attached to this file, each with the following properties:
-	id - The ID of the rating
-	votes - The total number of votes cast to this rating
-	score - The score value of this rating
-	 * 
-	 * 
-	 * 
-	 * Methods
-attachIcon:DisplayObjectContainer->Sprite // might not be needed
-clone:Void->SaveFile
-createIcon:IBitmapDrawable(DisplayObject & BitmapData)->Void
-sendVote:String->Float->Void
-toString:Void->String
-
-Properties
-_imageFilePath (static)
-_saveFilePath (static)
-bytesLoaded
-bytesTotal
-currentFile (static)
-draft // unused
-iconLoaded
-icon
-keys
-ratings
-readOnly
-	 * 
-	*/
 }
+
+// need to figure out how to represent images (w,h,pixels or png encoded string?)
+
+/*
+ * not implemented yet:
+ * 
+ * status - 1=private, 2=shared, 3=unapproved, 4=approved
+ * keys - An array of key objects associated with this file, each containing the following properties:
+	 * id - The ID of the key
+	 * value - The value of the key
+ * ratings - An array of rating objects attached to this file, each with the following properties:
+	 * id - The ID of the rating
+	 * votes - The total number of votes cast to this rating
+	 * score - The score value of this rating
+ * attachIcon:DisplayObjectContainer->Sprite // might not be needed
+ * clone:Void->SaveFile
+ * createIcon:IBitmapDrawable(DisplayObject & BitmapData)->Void
+ * sendVote:String->Float->Void
+ * toString:Void->String
+ * _imageFilePath (static)
+ * _saveFilePath (static)
+ * bytesLoaded
+ * bytesTotal
+ * currentFile (static)
+ * draft // unused
+ * iconLoaded
+ * icon
+ * keys
+ * ratings
+ * readOnly 
+*/

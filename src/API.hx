@@ -1,5 +1,4 @@
 package;
-import flash.Lib;
 import haxe.Json;
 import haxe.Log;
 import saves.SaveFile;
@@ -31,10 +30,10 @@ class API {
 	public inline static var API_PATH:String = "http://www.ngads.com/gateway_v2.php/";
 	public inline static var IMAGE_FILE_PATH:String = "http://apifiles.ngfiles.com/savedata/";
 	
-	function new(_apiId:String, _encryptionKey:String) {
+	function new(apiId:String, encryptionKey:String) {
 		
-		apiId = _apiId;
-		encryptionKey = _encryptionKey;
+		this.apiId = apiId;
+		this.encryptionKey = encryptionKey;
 		
 		var ac = new APICommand("connectMovie");
 		ac.addParam("host", "LocalHost").addParam("preload", true).addParam("movie_version", 1).addParam("skipAds", true);
@@ -43,7 +42,8 @@ class API {
 		ac.onStatus = showStatus;
 		ac.send();
 		
-		var params = Lib.current.loaderInfo.parameters;
+		// not sure what to do for other platforms yet, need to ask Tom eventually
+		var params = flash.Lib.current.loaderInfo.parameters;
 		
 		if (params != null) {
 			username = params.NewgroundsAPI_UserName;
@@ -58,7 +58,7 @@ class API {
 		if (sessionId == null) sessionId = "D3bu64p1U53R";
 		if (publisherId == 0) publisherId = 1;
 		
-		log("====== Newgrounds API v0.1 HAXE ======");
+		log("====== Newgrounds API v1.0 HAXE ======");
 		log("Connecting to the Newgrounds API Gateway...");
 	}
 	
@@ -72,8 +72,13 @@ class API {
 		for (m in medals)
 			if (m.name == medalName) medal = m;
 		
-		if (medal == null) return; // do something else? log?
-		medal.unlockMedal();
+		if (medal == null) {
+			log('Medal $medalName not found.');
+		}
+		
+		else {
+			medal.unlockMedal();
+		}
 	}
 	
 	public static function log(any:Dynamic):Void {
@@ -84,24 +89,21 @@ class API {
 		// not sure which ones I care about
 	#if flash
 		flash.Lib.trace(msg);
-	#elseif js
-		js.Lib.alert(msg);
 	#elseif sys
 		Sys.println(msg);
 	#else
 		haxe.Log.trace(msg);
 	#end
 		
-		// not sure how to make the project preview debug output recognize these, prolly some externalinterface call
+		// ExternalInterface call to the NG Project Preview Debug Window
 	}
 	
 	public static function createSaveFile(groupName:String):SaveFile {
 		
-		// time zone?
 		var date = Date.now().toString();
 		
 		var data = {
-			save_id : 0, // ?
+			save_id : -1, // id gets overwritten upon saving
 			filename : "",
 			user_id : userId,
 			user_name : username,
@@ -111,8 +113,6 @@ class API {
 			description : "",
 			group_id : getSaveGroupByName(groupName).id,
 		}
-		
-		// save file, get save_id from callback
 		
 		return new SaveFile(data);
 	}
@@ -142,7 +142,7 @@ class API {
 	static function onInitRequest(s:String):Void {
 		
 		var o = Json.parse(s);
-		if (o.success == 0) return; // just in case
+		if (o.success == 0) return;
 		
 		log('----- ${o.movie_name} -----');
 		
@@ -154,7 +154,7 @@ class API {
 			log(medals[i]);
 		}
 		
-		log('${medals.length} medals initialized.'); // always plural, w/e
+		log('${medals.length} medals initialized.');
 		
 		// "n scoreboards initialized."
 		
@@ -167,24 +167,9 @@ class API {
 		}
 		// savegroups: "SaveGroup: Name  Keys:   Ratings: "
 		
-		log('${groups.length} save groups initialized.'); // double check, assumed it was this
+		log('${groups.length} save groups initialized.');
 		
 		log("Connection complete!");
-		
-		
-		// TESTING
-		
-		//var m = medals[0];
-		//m.unlockMedal();
-	}
-	
-	static function lookAtFiles(sq:SaveQuery):Void {
-		for (save in sq.files) {
-			log([save.authorId, save.id, save.description]);
-			log(save.id);
-		}
-		
-		// sq.files[sq.files.length - 1].load();
 	}
 	
 	static function populateSaveFile(s:String):Void {

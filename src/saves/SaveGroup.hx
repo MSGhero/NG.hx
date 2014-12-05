@@ -1,7 +1,7 @@
 package saves;
 
 /**
- * ...
+ * The group that a SaveFile exists within, including Keys and Ratings.
  * @author MSGHero
  */
 class SaveGroup{
@@ -11,8 +11,6 @@ class SaveGroup{
 	public var type(default, null):SaveGroupType;
 	public var keys(default, null):Array<SaveKey>;
 	// var ratings:Array<SaveKey>;
-	
-	// var connection:APIConnection ???
 	
 	public function new(groupData:Dynamic) {
 		
@@ -25,7 +23,6 @@ class SaveGroup{
 		if (keyData == null) keyData = [];
 		for (i in 0...keyData.length) {
 			keys.push(new SaveKey(keyData[i]));
-			// API.log(keys[i]);
 		}
 		
 		// groupData.ratings

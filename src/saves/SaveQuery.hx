@@ -2,13 +2,16 @@ package saves;
 import haxe.Json;
 
 /**
- * ...
+ * Sets up a query to NG's servers for save data.
  * @author MSGHero
  */
 class SaveQuery{
 
 	var conditions:Array<QueryCondition>;
 	var callback:SaveQuery->Void;
+	
+	public var resultsPerPage:Int;
+	public var page:Int;
 	
 	public var files(default, null):Array<SaveFile>;
 	public var group(default, null):SaveGroup;
@@ -25,6 +28,8 @@ class SaveQuery{
 	public function reset():Void {
 		conditions = [];
 		files = [];
+		resultsPerPage = 30;
+		page = 1;
 	}
 	
 	public function execute(?onQueryCallback:SaveQuery->Void):Void {
@@ -33,8 +38,8 @@ class SaveQuery{
 		
 		// props
 		var query:Dynamic = {
-			num_results:30,
-			page:1,
+			num_results:resultsPerPage,
+			page:page,
 		};
 		
 		// randomize=1 if true, no param if false

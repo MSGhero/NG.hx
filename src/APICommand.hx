@@ -7,7 +7,7 @@ import haxe.io.Bytes;
 import haxe.Json;
 
 /**
- * ...
+ * Aid to post data to NG's servers.
  * @author MSGHero
  */
 class APICommand{
@@ -165,7 +165,7 @@ class APICommand{
 				b.add('Content-Disposition: form-data; name="' + v.dataField + '"; filename="' + v.filename + '"' + CRLF);
 				b.add('Content-Type: ' + v.contentType + CRLF);
 				b.add(CRLF);
-				b.add(v.data.toHex()); // or to hex?
+				b.add(v.data.toHex());
 				b.add(CRLF);
 			}
 			
@@ -205,83 +205,3 @@ typedef File = {
 	dataField:String,
 	contentType:String
 }
-
-/*
-
-h._~E%@=XQ&w#PE|EtP?/--dfrvuioadeplohwyycrcphbdfnprhqae
-Content-Disposition: form-data; name="tracker_id"
-
-37760:VcasLmE5
---dfrvuioadeplohwyycrcphbdfnprhqae
-Content-Disposition: form-data; name="secure"
-
-4&w#d|^I|e/NssxD$96k@eFd>8QFJ%g~E6&`7BMmxe<vA;*)IENgvvxrhv9k&6$;41a9ss8tT*se%5E^6QQT6/D^BkxS0/PMGvs9gb4bP;~C`lNj5`aZk3R2FzIyT7tGe%vp0e7Dm1W@f52$9OeG|6@`3lm^E5fBFZ&Rm#UjB8xsF7/F@srB`b6A4`pWX7Gxzl%Gs/DB4OuKr%aymBt`L;/lO%H0z*#1^9@x63iYp5ScukZCMg|sBkY^z9CN7;JlsB1Q*1Y@(vYc%/EdL9^+Dlqgz2Fh|9X%p`BWx2ZdAEZ7|*BJd1*jVv4qjur8)w;sx3#M0%T8f6aUs;Nnh1xd@//&t
---dfrvuioadeplohwyycrcphbdfnprhqae
-Content-Disposition: form-data; name="command_id"
-
-securePacket
---dfrvuioadeplohwyycrcphbdfnprhqae
-Content-Disposition: form-data; name="debug"
-
-1
---dfrvuioadeplohwyycrcphbdfnprhqae
-Content-Disposition: form-data; name="Filename"
-
-thumbnail
---dfrvuioadeplohwyycrcphbdfnprhqae
-Content-Disposition: form-data; name="thumbnail"; filename="thumbnail"
-Content-Type: application/octet-stream
-
-PNG
-
-IHDRZZ8AIDATx1_Z[xj8!AhD-AhDh--Z4E#ZhDFhh-E#Z4EFhDh--Z4E#ZhDFhh-E#Z4EFhD,.dIENDB`
---dfrvuioadeplohwyycrcphbdfnprhqae
-Content-Disposition: form-data; name="Filename"
-
-file
---dfrvuioadeplohwyycrcphbdfnprhqae
-Content-Disposition: form-data; name="file"; filename="file"
-Content-Type: application/octet-stream
-
-xcN,KUpI,IC
---dfrvuioadeplohwyycrcphbdfnprhqae
-Content-Disposition: form-data; name="Upload"
-
-Submit Query
---dfrvuioadeplohwyycrcphbdfnprhqae--
-
-*/
-
-/*
-
-h._~E(#@=XQ&w#P9=EP@C--;OU>lJA%p#`i4qLc4Yd&;sqrX+HQST4q
-Content-Disposition: form-data; name="command_id"
-
-securePacket
---;OU>lJA%p#`i4qLc4Yd&;sqrX+HQST4q
-Content-Disposition: form-data; name="secure"
-
-06z1KlRhA1n;nlkzf1SY+QFlC2Z8P5mwA2imr8gmv%Za^b7zIOSVPQi7il(ul6NfAw%v@71^rEVfH5DT*QBq^Qlq%Zp#w8jixbr^n;L@Tv8ur3HOz7<oaZ0DSOrktCWe29>aauI$Cww&KixGu*txBbNV6Z2U|wOyAki$&#tbCvjXX%M;+%2CQv7EO`TU4w&RKlr(|vWGr7i2QzPI6&@/XlYZ9AB|u*CAmzHNKk@qis8<Kg|PUlB64
---;OU>lJA%p#`i4qLc4Yd&;sqrX+HQST4q
-Content-Disposition: form-data; name="tracker_id"
-
-37760:VcasLmE5
---;OU>lJA%p#`i4qLc4Yd&;sqrX+HQST4q
-Content-Disposition: form-data; name="debug"
-
-1
---;OU>lJA%p#`i4qLc4Yd&;sqrX+HQST4q
-Content-Disposition: form-data; name="Filename"
-
-file
---;OU>lJA%p#`i4qLc4Yd&;sqrX+HQST4q
-Content-Disposition: form-data; name="file"; filename="file"
-Content-Type: application/octet-stream
-
-xfL)MfN/Ne
---;OU>lJA%p#`i4qLc4Yd&;sqrX+HQST4q
-Content-Disposition: form-data; name="Upload"
-
-Submit Query
---;OU>lJA%p#`i4qLc4Yd&;sqrX+HQST4q--
-*/
